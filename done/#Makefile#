@@ -1,0 +1,69 @@
+## ======================================================================
+
+GTK_INCLUDE := `pkg-config --cflags gtk+-3.0`
+GTK_LIBS := `pkg-config --libs gtk+-3.0`
+
+.PHONY: clean new style feedback submit1 submit2 submit
+
+CFLAGS += -std=c11 -Wall -pedantic -g
+
+# a bit more checks if you'd like to (uncomment
+CFLAGS += -Wextra -Wfloat-equal -Wshadow                         \
+-Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings \
+-Wconversion -Wunreachable-code
+
+# uncomment if you want to add DEBUG flag
+# CPPFLAGS += -DDEBUG
+
+# ----------------------------------------------------------------------
+
+# all those libs are required on Debian, feel free to adapt it to your box
+LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
+
+all:: 
+
+TARGETS := 
+CHECK_TARGETS := unit-test-bit unit-test-alu
+OBJS = 
+OBJS_NO_STATIC_TESTS =
+OBJS_STATIC_TESTS = 
+OBJS = $(OBJS_STATIC_TESTS) $(OBJS_NO_STATIC_TESTS)
+
+
+
+# ----------------------------------------------------------------------
+
+
+
+clean::
+	-@/bin/rm -f *.o *~ $(CHECK_TARGETS)
+
+new: clean all
+
+static-check:
+	scan-build -analyze-headers --status-bugs -maxloop 64 make CC=clang new
+
+style:
+	astyle -n -o -A8 -xt0 *.[ch]
+
+# all those libs are required on Debian, adapt to your box
+$(CHECK_TARGETS): LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
+
+check:: $(CHECK_TARGETS)
+	$(foreach target,$(CHECK_TARGETS),./$(target) &&) true
+
+# target to run tests
+check:: all
+	@if ls tests/*.*.sh 1> /dev/null 2>&1; then \
+	  for file in tests/*.*.sh; do [ -x $$file ] || echo "Launching $$file"; ./$$file || exit 1; done; \
+	fi
+	
+
+libsid.so: sidlib.c
+	$(CC) -fPIC -shared $(CPPFLAGS) $(CFLAGS) $(GTK_INCLUDE) $^ -o $@
+
+libsid_demo.o: CFLAGS += $(GTK_INCLUDE)
+
+libsid_demo: LDFLAGS += -L.
+libsid_demo: LDLIBS += $(GTK_LIBS) -lsid
+libsid_demo: libsid_demo.o libsid.so
