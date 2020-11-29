@@ -12,8 +12,4 @@ Ps: If you want more ROM just download one and put it in the Done repository and
 
 COMMANDS:
 
-Keyboard  ==> 	Gameboy
-A		A
-Z		B
-K		START
-L	        SELECT
+Keyboard-Gameboy : A-A, Z-B, K-START, L-SELECT
